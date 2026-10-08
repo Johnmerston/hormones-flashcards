@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Hormones — Flashcards</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:#0e1116;color:#e8ebf2;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  display:flex;flex-direction:column;
+  height:100vh;height:100dvh;
+  overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+header{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 6px;
+}
+.title{font-size:15px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.counter{font-size:14px;color:#8b93a7;font-variant-numeric:tabular-nums}
+#chips{
+  display:flex;gap:8px;padding:6px 16px 10px;overflow-x:auto;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+#chips::-webkit-scrollbar{display:none}
+.chip{
+  white-space:nowrap;border:1.5px solid var(--c);background:transparent;
+  color:#dfe3ec;font-size:12.5px;font-weight:600;padding:7px 13px;
+  border-radius:999px;font-family:inherit;cursor:pointer;flex:0 0 auto;
+}
+.chip.on{background:var(--c);border-color:var(--c);color:#fff}
+.chip.neutral.on{background:#e8ebf2;border-color:#e8ebf2;color:#0e1116}
+.stage{
+  flex:1;min-height:0;position:relative;
+  perspective:1600px;touch-action:pan-y;
+}
+.card{
+  position:absolute;inset:4px 16px 8px;
+  transform-style:preserve-3d;cursor:pointer;
+  transition:transform .45s cubic-bezier(.2,.7,.3,1);
+}
+.card.flipped{transform:rotateY(180deg)}
+.face{
+  position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border-radius:20px;padding:22px 20px;overflow-y:auto;
+  box-shadow:0 12px 34px rgba(0,0,0,.5);
+}
+.front{
+  background:#ffffff;color:#12151c;
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  text-align:center;
+}
+.back{
+  background:#fbf8ef;color:#12151c;transform:rotateY(180deg);
+  display:flex;flex-direction:column;
+}
+.badge{
+  display:inline-block;font-size:11px;font-weight:800;letter-spacing:.12em;
+  text-transform:uppercase;color:#fff;background:var(--sec,#666);
+  padding:5px 11px;border-radius:999px;
+}
+.names{padding:14px 4px}
+.main{font-weight:800;font-size:clamp(22px,6.5vw,36px);line-height:1.15;overflow-wrap:break-word}
+.main.big{font-size:clamp(44px,15vw,68px);letter-spacing:.02em}
+.sub{margin-top:8px;font-size:clamp(16px,4.5vw,24px);font-weight:600;color:#5b6376}
+.hint-mini{font-size:12px;color:#98a0b3}
+.back-head{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding-bottom:12px;border-bottom:1px solid #e6dfcc;margin-bottom:14px;
+}
+.back-name{font-weight:700;font-size:15px;color:#3a3f4d}
+.fact{margin-bottom:14px}
+.fact:last-child{margin-bottom:2px}
+.label{
+  font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  color:#9aa0b0;margin-bottom:3px;
+}
+.value{font-size:clamp(15px,4.1vw,17px);line-height:1.45;color:#171a22;overflow-wrap:break-word}
+.hint{
+  text-align:center;font-size:12px;color:#767e92;
+  padding:6px 16px 2px;
+}
+footer{
+  display:flex;gap:10px;
+  padding:4px 16px calc(env(safe-area-inset-bottom) + 12px);
+}
+.btn{
+  flex:1;min-height:48px;border-radius:14px;border:1px solid #2a3141;
+  background:#171c26;color:#e8ebf2;font-size:15px;font-weight:600;
+  font-family:inherit;cursor:pointer;
+}
+.btn:active{transform:scale(.97);background:#202635}
+.btn.primary{background:#2f7fd8;border-color:#2f7fd8}
+.btn.primary:active{background:#2a6fb8}
+@media (max-height:520px){
+  .face{padding:14px 16px}
+  .names{padding:6px 4px}
+  .fact{margin-bottom:9px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">Hormones</div>
+  <div class="counter" id="counter">1 / 34</div>
+</header>
+
+<div id="chips"></div>
+
+<div class="stage" id="stage">
+  <div class="card" id="card">
+    <div class="face front" id="front"></div>
+    <div class="face back" id="back"></div>
+  </div>
+</div>
+
+<div class="hint">tap card to flip &middot; swipe to move</div>
+
+<footer>
+  <button class="btn" id="prev" aria-label="Previous card">&#9664; Prev</button>
+  <button class="btn" id="shuffle" aria-label="Shuffle deck">&#8644; Shuffle</button>
+  <button class="btn primary" id="next" aria-label="Next card">Next &#9654;</button>
+</footer>
+
+<script>
+const CARDS=[
+{s:"Pituitary",n:"GH — Growth Hormone",f:{
+  Source:"Anterior pituitary",
+  Target:"Liver, bone, muscle, adipose tissue",
+  Function:"Promotes body growth; stimulates IGF-1; increases protein synthesis and lipolysis",
+  Regulation:"GHRH ↑; somatostatin ↓; IGF-1 provides negative feedback"}},
+{s:"Pituitary",n:"PRL — Prolactin",f:{
+  Source:"Anterior pituitary",
+  Target:"Mammary glands",
+  Function:"Promotes milk production",
+  Regulation:"Dopamine inhibits secretion; suckling promotes secretion"}},
+{s:"Pituitary",n:"TSH — Thyroid-Stimulating Hormone",f:{
+  Source:"Anterior pituitary",
+  Target:"Thyroid gland",
+  Function:"Stimulates thyroid hormone synthesis and release",
+  Regulation:"TRH ↑; T3/T4 negative feedback"}},
+{s:"Pituitary",n:"ACTH — Adrenocorticotropic Hormone",f:{
+  Source:"Anterior pituitary",
+  Target:"Adrenal cortex",
+  Function:"Stimulates mainly cortisol synthesis",
+  Regulation:"CRH ↑; cortisol negative feedback"}},
+{s:"Pituitary",n:"FSH — Follicle-Stimulating Hormone",f:{
+  Source:"Anterior pituitary",
+  Target:"Ovaries / testes",
+  Function:"Follicular development and estrogen production; supports spermatogenesis",
+  Regulation:"GnRH; inhibin provides negative feedback"}},
+{s:"Pituitary",n:"LH — Luteinizing Hormone",f:{
+  Source:"Anterior pituitary",
+  Target:"Ovaries / testes",
+  Function:"Ovulation and corpus luteum formation; stimulates testosterone production",
+  Regulation:"GnRH; sex-steroid feedback"}},
+{s:"Pituitary",n:"ADH / Vasopressin",f:{
+  Source:"Posterior pituitary (synthesized in hypothalamus)",
+  Target:"Kidney collecting ducts; blood vessels",
+  Function:"Increases water reabsorption; promotes vasoconstriction",
+  Regulation:"Increased plasma osmolality or decreased blood volume/pressure"}},
+{s:"Pituitary",n:"Oxytocin",f:{
+  Source:"Posterior pituitary (synthesized in hypothalamus)",
+  Target:"Uterus; mammary glands",
+  Function:"Uterine contraction and milk ejection",
+  Regulation:"Positive feedback during labour and suckling"}},
+{s:"Thyroid",n:"T3 — Triiodothyronine",f:{
+  Source:"Thyroid follicular cells",
+  Target:"Most tissues",
+  Function:"Increases metabolic activity; supports growth and development",
+  Regulation:"TSH; negative feedback through T3/T4"}},
+{s:"Thyroid",n:"T4 — Thyroxine",f:{
+  Source:"Thyroid follicular cells",
+  Target:"Most tissues",
+  Function:"Major circulating thyroid hormone; converted to T3 in peripheral tissues",
+  Regulation:"TSH; negative feedback"}},
+{s:"Thyroid",n:"Calcitonin",f:{
+  Source:"Thyroid parafollicular (C) cells",
+  Target:"Bone and kidney",
+  Function:"Lowers blood Ca²⁺; inhibits osteoclast activity",
+  Regulation:"Increased blood Ca²⁺"}},
+{s:"Pancreas",n:"Insulin",f:{
+  Source:"β-cells of pancreatic islets",
+  Target:"Liver, muscle, adipose tissue",
+  Function:"Lowers blood glucose; promotes glucose uptake, glycogen synthesis and anabolic metabolism",
+  Regulation:"Increased blood glucose; incretins enhance secretion"}},
+{s:"Pancreas",n:"Glucagon",f:{
+  Source:"α-cells of pancreatic islets",
+  Target:"Mainly liver",
+  Function:"Raises blood glucose through glycogenolysis and gluconeogenesis",
+  Regulation:"Low blood glucose"}},
+{s:"Pancreas",n:"Somatostatin",f:{
+  Source:"δ-cells of pancreatic islets",
+  Target:"Pancreatic cells and gastrointestinal tract",
+  Function:"Inhibits insulin, glucagon and gastrointestinal secretions",
+  Regulation:"Nutrient and hormonal signals"}},
+{s:"Pancreas",n:"Pancreatic Polypeptide (PP)",f:{
+  Source:"PP/γ (F) cells of pancreatic islets",
+  Target:"Pancreas and gastrointestinal tract",
+  Function:"Modulates pancreatic secretion, gastrointestinal activity and appetite",
+  Regulation:"Food intake, fasting and vagal stimulation"}},
+{s:"Pancreas",n:"Ghrelin",f:{
+  Source:"ε-cells of pancreas (particularly during fetal life); stomach is the major adult source",
+  Target:"Hypothalamus and pituitary",
+  Function:"Stimulates appetite and GH secretion",
+  Regulation:"Increases during fasting"}},
+{s:"Adrenals",n:"Aldosterone",f:{
+  Source:"Zona glomerulosa",
+  Target:"Kidney distal nephron",
+  Function:"Increases Na⁺ reabsorption and K⁺/H⁺ secretion; increases blood volume and pressure",
+  Regulation:"Mainly Angiotensin II and increased plasma K⁺"}},
+{s:"Adrenals",n:"Cortisol",f:{
+  Source:"Zona fasciculata",
+  Target:"Most tissues",
+  Function:"Increases gluconeogenesis; supports stress response; suppresses inflammation",
+  Regulation:"CRH → ACTH; cortisol negative feedback"}},
+{s:"Adrenals",n:"DHEA — Dehydroepiandrosterone",f:{
+  Source:"Zona reticularis",
+  Target:"Peripheral tissues",
+  Function:"Adrenal androgen; precursor for sex steroids",
+  Regulation:"Mainly ACTH"}},
+{s:"Adrenals",n:"Androstenedione",f:{
+  Source:"Zona reticularis",
+  Target:"Peripheral tissues",
+  Function:"Adrenal androgen; precursor for testosterone and estrogens",
+  Regulation:"Mainly ACTH"}},
+{s:"Adrenals",n:"Epinephrine / Adrenaline",f:{
+  Source:"Adrenal medulla chromaffin cells",
+  Target:"Multiple tissues",
+  Function:"Fight-or-flight response; increases heart rate, cardiac output and blood glucose",
+  Regulation:"Sympathetic preganglionic stimulation"}},
+{s:"Adrenals",n:"Norepinephrine / Noradrenaline",f:{
+  Source:"Adrenal medulla chromaffin cells",
+  Target:"Blood vessels and other tissues",
+  Function:"Primarily increases vascular tone and blood pressure",
+  Regulation:"Sympathetic preganglionic stimulation"}},
+{s:"Insects",n:"Ecdysone / Ecdysteroids",f:{
+  Source:"Prothoracic glands",
+  Target:"Peripheral tissues",
+  Function:"Initiates moulting and metamorphosis",
+  Regulation:"Stimulated by PTTH"}},
+{s:"Insects",n:"Juvenile Hormone (JH)",f:{
+  Source:"Corpora allata",
+  Target:"Peripheral tissues",
+  Function:"Maintains juvenile characteristics; regulates metamorphosis and reproduction",
+  Regulation:"Controlled by neuroendocrine signals including allatotropins and allatostatins"}},
+{s:"Insects",n:"PTTH — Prothoracicotropic Hormone",f:{
+  Source:"Brain neurosecretory cells",
+  Target:"Prothoracic glands",
+  Function:"Stimulates ecdysone production",
+  Regulation:"Neuroendocrine and developmental signals"}},
+{s:"Insects",n:"Allatotropin",f:{
+  Source:"Brain / neurosecretory cells",
+  Target:"Corpora allata",
+  Function:"Stimulates juvenile hormone synthesis",
+  Regulation:"Neuroendocrine control"}},
+{s:"Insects",n:"Allatostatin",f:{
+  Source:"Brain / neurosecretory cells",
+  Target:"Corpora allata",
+  Function:"Inhibits juvenile hormone synthesis",
+  Regulation:"Neuroendocrine control"}},
+{s:"Insects",n:"Adipokinetic Hormone (AKH)",f:{
+  Source:"Corpora cardiaca",
+  Target:"Fat body",
+  Function:"Mobilizes stored lipids and carbohydrates during energy demand",
+  Regulation:"Nutritional and energetic state"}},
+{s:"Crustaceans",n:"Ecdysteroids / Ecdysone",f:{
+  Source:"Y-organ",
+  Target:"Peripheral tissues",
+  Function:"Promotes moulting",
+  Regulation:"Stimulated by neuroendocrine signals; regulated by MIH"}},
+{s:"Crustaceans",n:"Crustacean Hyperglycemic Hormone (CHH)",f:{
+  Source:"X-organ–sinus gland complex",
+  Target:"Hepatopancreas and other tissues",
+  Function:"Raises haemolymph glucose; regulates energy metabolism and stress responses",
+  Regulation:"Metabolic and environmental stress"}},
+{s:"Crustaceans",n:"Moult-Inhibiting Hormone (MIH)",f:{
+  Source:"X-organ–sinus gland complex",
+  Target:"Y-organ",
+  Function:"Inhibits ecdysteroid synthesis and moulting",
+  Regulation:"Neuroendocrine control"}},
+{s:"Crustaceans",n:"Gonad-Inhibiting Hormone (GIH)",f:{
+  Source:"X-organ–sinus gland complex",
+  Target:"Gonads",
+  Function:"Suppresses reproductive development",
+  Regulation:"Neuroendocrine control"}},
+{s:"Crustaceans",n:"Vitellogenesis-Inhibiting Hormone (VIH)",f:{
+  Source:"X-organ–sinus gland complex",
+  Target:"Ovary",
+  Function:"Inhibits vitellogenin synthesis / vitellogenesis",
+  Regulation:"Neuroendocrine control"}},
+{s:"Crustaceans",n:"Mandibular Organ-Inhibiting Hormone (MOIH)",f:{
+  Source:"X-organ–sinus gland complex",
+  Target:"Mandibular organ",
+  Function:"Inhibits methyl farnesoate synthesis",
+  Regulation:"Neuroendocrine control"}}
+];
+
+const SEC_COLOR={
+  Pituitary:"#7c5cff",
+  Thyroid:"#0a9d9d",
+  Pancreas:"#e07b00",
+  Adrenals:"#d6336c",
+  Insects:"#3a9e4b",
+  Crustaceans:"#2f7fd8"
+};
+
+const stage=document.getElementById("stage");
+const card=document.getElementById("card");
+const front=document.getElementById("front");
+const back=document.getElementById("back");
+const counter=document.getElementById("counter");
+const chipsEl=document.getElementById("chips");
+
+const sections=[...new Set(CARDS.map(c=>c.s))];
+let order=CARDS.map((_,i)=>i);
+let pos=0;
+let filter="All";
+let suppressClick=false;
+let maxMove=0;
+let sx=null,sy=null;
+let dragging=false;
+let lastTouch=0;
+
+function buildChips(){
+  const all=["All",...sections];
+  chipsEl.innerHTML=all.map(name=>{
+    const c=name==="All"?"#5a6376":SEC_COLOR[name];
+    const neutral=name==="All"?" neutral":"";
+    const on=name===filter?" on":"";
+    return `<button class="chip${neutral}${on}" style="--c:${c}" data-s="${name}">${name}</button>`;
+  }).join("");
+  chipsEl.querySelectorAll(".chip").forEach(ch=>{
+    ch.addEventListener("click",()=>{
+      filter=ch.dataset.s;
+      buildChips();
+      buildDeck();
+    });
+  });
+}
+
+function buildDeck(){
+  order=CARDS.map((c,i)=>({c,i})).filter(o=>filter==="All"||o.c.s===filter).map(o=>o.i);
+  pos=0;
+  render();
+}
+
+function shuffle(){
+  const cur=order[pos];
+  const rest=order.filter((_,k)=>k!==pos);
+  for(let i=rest.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [rest[i],rest[j]]=[rest[j],rest[i]];
+  }
+  order=[cur,...rest];
+  pos=0;
+  render();
+}
+
+function go(d){
+  pos=(pos+d+order.length)%order.length;
+  render();
+}
+
+function render(){
+  const c=CARDS[order[pos]];
+  const sec=SEC_COLOR[c.s]||"#666";
+  const parts=c.n.split(" — ");
+  const main=parts[0];
+  const sub=parts.slice(1).join(" — ");
+  const big=main.length<=10?" big":"";
+
+  front.innerHTML=
+    `<span class="badge" style="--sec:${sec}">${c.s}</span>`+
+    `<div class="names"><div class="main${big}">${main}</div>`+
+    (sub?`<div class="sub">${sub}</div>`:"")+`</div>`+
+    `<div class="hint-mini">tap to flip</div>`;
+
+  back.innerHTML=
+    `<div class="back-head"><span class="badge" style="--sec:${sec}">${c.s}</span>`+
+    `<span class="back-name">${c.n}</span></div>`+
+    Object.entries(c.f).map(([k,v])=>
+      `<div class="fact"><div class="label">${k}</div><div class="value">${v}</div></div>`
+    ).join("");
+
+  counter.textContent=(pos+1)+" / "+order.length;
+  card.classList.remove("flipped");
+}
+
+function flip(){
+  card.classList.toggle("flipped");
+}
+
+function start(x,y){
+  suppressClick=false;
+  maxMove=0;
+  sx=x;
+  sy=y;
+}
+function move(x,y){
+  if(sx===null)return;
+  const dx=Math.abs(x-sx);
+  const dy=Math.abs(y-sy);
+  if(dx>maxMove)maxMove=dx;
+  if(dy>maxMove)maxMove=dy;
+}
+function end(x,y){
+  if(sx===null)return;
+  const dx=x-sx;
+  const dy=y-sy;
+  sx=null;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
+    suppressClick=true;
+    go(dx<0?1:-1);
+  }
+}
+function cancelTouch(){sx=null;}
+
+stage.addEventListener("touchstart",e=>{
+  if(e.touches.length!==1)return;
+  lastTouch=Date.now();
+  start(e.touches[0].clientX,e.touches[0].clientY);
+},{passive:true});
+stage.addEventListener("touchmove",e=>{
+  if(e.touches.length!==1){cancelTouch();return;}
+  move(e.touches[0].clientX,e.touches[0].clientY);
+},{passive:true});
+stage.addEventListener("touchend",e=>{
+  lastTouch=Date.now();
+  end(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+},{passive:true});
+stage.addEventListener("touchcancel",cancelTouch);
+
+stage.addEventListener("mousedown",e=>{
+  if(Date.now()-lastTouch<800)return;
+  if(e.button!==0)return;
+  dragging=true;
+  start(e.clientX,e.clientY);
+});
+window.addEventListener("mousemove",e=>{
+  if(!dragging)return;
+  move(e.clientX,e.clientY);
+});
+window.addEventListener("mouseup",e=>{
+  if(!dragging)return;
+  dragging=false;
+  end(e.clientX,e.clientY);
+});
+
+stage.addEventListener("click",()=>{
+  if(suppressClick){suppressClick=false;return;}
+  if(maxMove>10){maxMove=0;return;}
+  flip();
+});
+
+document.getElementById("prev").addEventListener("click",()=>go(-1));
+document.getElementById("next").addEventListener("click",()=>go(1));
+document.getElementById("shuffle").addEventListener("click",shuffle);
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft"){go(-1);}
+  else if(e.key==="ArrowRight"){go(1);}
+  else if(e.key===" "||e.key==="Enter"){
+    if(document.activeElement&&document.activeElement.tagName==="BUTTON")return;
+    e.preventDefault();
+    flip();
+  }
+});
+
+buildChips();
+buildDeck();
+</script>
+</body>
+</html>
